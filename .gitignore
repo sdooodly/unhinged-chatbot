@@ -1,21 +1,6 @@
-# Dependencies
 node_modules/
-
-# Secrets & Environment
-.env
-
-# WhatsApp Session Data 
-auth_info/
-
-# Build Output
 dist/
-*.js
-*.js.map
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# System Files
+auth_info/
+.env
+*.log
 .DS_Store

@@ -1,37 +1,78 @@
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
-import { Boom } from '@hapi/boom';
-import { GYM_PROMPT } from './persona.js';
-import { getGeminiResponse } from './gemini.js';
-import * as dotenv from 'dotenv';
+import { Client, GatewayIntentBits, Message } from 'discord.js';
+import { config, validateConfig } from './config';
+import { getUnhingedResponse } from './gemini';
 
-dotenv.config();
+// Disable SSL verification (only for development/corporate networks)
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info');
-    const sock = makeWASocket({ auth: state, printQRInTerminal: true });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.DirectMessages,
+  ],
+});
 
-    sock.ev.on('creds.update', saveCreds);
+client.once('ready', () => {
+  console.log(`✅ Bot is online as ${client.user?.tag}`);
+  console.log('💪 Ready to roast some lazy people!');
+});
 
-    sock.ev.on('messages.upsert', async ({ messages }) => {
-        const msg = messages?.[0]; // Add the '?' here
-        if (!msg || !msg.message || msg.key.fromMe) return;
+client.on('messageCreate', async (message: Message) => {
+  // Ignore bot's own messages
+  if (message.author.bot) return;
 
-        const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
-        if (!text) return;
+  // Ignore empty messages
+  if (!message.content.trim()) return;
 
-        // Get unhinged response from Gemini
-        const response = await getGeminiResponse(text);
-        
-        await sock.sendMessage(msg.key.remoteJid!, { text: response });
-    });
+  try {
+    // Show typing indicator (if supported)
+    if ('sendTyping' in message.channel) {
+      await message.channel.sendTyping();
+    }
 
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
-        if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-            if (shouldReconnect) startBot();
-        }
-    });
+    console.log(`📩 Message from ${message.author.tag}: ${message.content}`);
+
+    // Get response from Gemini
+    const response = await getUnhingedResponse(message.content);
+
+    // Send response
+    await message.reply(response);
+
+    console.log(`✅ Replied to ${message.author.tag}`);
+  } catch (error) {
+    console.error('Error handling message:', error);
+    await message.reply('Something broke. Unlike your workout streak, which never existed.');
+  }
+});
+
+// Start the bot
+async function start() {
+  try {
+    validateConfig();
+    
+    console.log('🔄 Connecting to Discord...');
+    console.log('Token length:', config.discord.token.length);
+    console.log('Token starts with:', config.discord.token.substring(0, 20) + '...');
+    
+    await client.login(config.discord.token);
+  } catch (error: any) {
+    console.error('Failed to start bot:', error.message);
+    
+    if (error.message.includes('Incorrect login') || error.message.includes('token')) {
+      console.error('\n❌ Invalid Discord token!');
+      console.error('Please:');
+      console.error('1. Go to https://discord.com/developers/applications');
+      console.error('2. Select your application');
+      console.error('3. Go to Bot tab');
+      console.error('4. Click "Reset Token"');
+      console.error('5. Copy the NEW token');
+      console.error('6. Update DISCORD_TOKEN in .env file');
+    }
+    
+    process.exit(1);
+  }
 }
 
-startBot();
+start();
