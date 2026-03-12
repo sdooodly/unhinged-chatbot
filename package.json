@@ -1,30 +1,29 @@
 {
-  "name": "unhinged-gym-bot",
+  "name": "unhinged-chatbot",
   "version": "1.0.0",
-  "description": "Discord bot with unhinged gym drill sergeant persona",
+  "description": "Discord bot with RAG-based responses",
   "main": "dist/index.js",
   "type": "commonjs",
   "scripts": {
     "dev": "ts-node src/index.ts",
+    "setup": "ts-node src/setup-knowledge.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
-  "keywords": [
-    "discord",
-    "bot",
-    "gym",
-    "gemini"
-  ],
+  "keywords": ["discord", "bot", "rag"],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "discord.js": "^14.16.3",
-    "dotenv": "^17.3.1"
+    "dotenv": "^16.4.5",
+    "langchain": "^0.2.0",
+    "@langchain/openai": "^0.2.0",
+    "@langchain/community": "^0.2.0",
+    "faiss-node": "^0.5.1"
   },
   "devDependencies": {
-    "@types/node": "^25.4.0",
+    "@types/node": "^20.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.3.0"
   }
 }
